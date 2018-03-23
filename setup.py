@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2014, 2015, 2016 Martin Raspaud
+# Copyright (c) 2018 Trygve Aspenenes
 
 # Author(s):
 
-#   Martin Raspaud <martin.raspaud@smhi.se>
+#   Trygve Aspenes <trygveas@met.no>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,19 +20,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Setup for pytroll_collectors.
+"""Setup for pytroll_handle messages.
 """
 from setuptools import setup
 import imp
 
 version = imp.load_source(
-    'pytroll_collectors.version', 'pytroll_collectors/version.py')
+    'handle_messages.version', 'handle_messages/version.py')
 
-setup(name="pytroll_collectors",
+setup(name="pytroll_handle_messages",
       version=version.__version__,
-      description='Pytroll data collectors',
-      author='Martin Raspaud',
-      author_email='martin.raspaud@smhi.se',
+      description='Pytroll handle messages',
+      author='Trygve Aspenes',
+      author_email='trygveas@met.no',
       classifiers=["Development Status :: 3 - Alpha",
                    "Intended Audience :: Science/Research",
                    "License :: OSI Approved :: GNU General Public License v3 " +
@@ -40,25 +40,14 @@ setup(name="pytroll_collectors",
                    "Operating System :: OS Independent",
                    "Programming Language :: Python",
                    "Topic :: Scientific/Engineering"],
-      url="https://github.com/pytroll/pytroll-collectors",
-      packages=['pytroll_collectors',
-                'pytroll_collectors.tests', ],
-      scripts=['bin/trollstalker.py',
-               'bin/trollstalker2.py',
-               'bin/gatherer.py',
-               'bin/geo_gatherer.py',
-               'bin/segment_gatherer.py',
-               'bin/cat.py',
-               'bin/catter.py',
-               'bin/scisys_receiver.py',
-               'bin/create_global_mosaic.py',
+      url="",
+      packages=['handle_messages',],
+      scripts=['bin/pytroll-handle-messages.py',
                ],
       data_files=[],
       zip_safe=False,
-      install_requires=['pykdtree', 'pyinotify', 'mpop', 'posttroll',
-                        'trollsift', 'netifaces',
-                        'pytroll-schedule', 'pyresample',
-                        'pillow', ],
-      tests_require=['mock', 'scipy'],
-      test_suite='pytroll_collectors.tests.suite',
+      install_requires=['posttroll', 'trollsift', 'netifaces',
+                        ],
+      tests_require=[],
+      test_suite='',
       )
