@@ -123,7 +123,7 @@ def read_from_queue(queue, logger):
 
             try:
                 cnx = mysql.connector.connect(user='polarsat', password='lilla land',
-                                              host='10.99.3.111',
+                                              host='157.249.169.223',
                                               database='pytrollmessages')
                 
             except mysql.connector.Error as err:
@@ -136,7 +136,7 @@ def read_from_queue(queue, logger):
             else:
                 message_insert = cnx.cursor(dictionary=True)
                 try:
-                    statement = "insert into t1 (topic, datetime, type, jdoc) value(\"{}\",\"{}\",\"{}\",'{}')".format(msg.subject, msg.time, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
+                    statement = "insert into messages (topic, datetime, msg_host, type, jdoc) value(\"{}\",\"{}\",\"{}\",\"{}\",'{}')".format(msg.subject, msg.time, msg.host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
                     exed = message_insert.execute(statement)
                     cnx.commit()
                 except mysql.connector.Error as err:
