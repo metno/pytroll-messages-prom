@@ -57,6 +57,11 @@ class MessageHandler(object):
         except (NoOptionError, ValueError):
             nameservers = []
 
+        try:
+            self.providing_server = config.get(section,'providing-server')
+        except:
+            self.providing_server = None
+
         self._listener = ListenerContainer(topics=topics)
         #self._parser = Parser(self._pattern)
 
@@ -81,6 +86,9 @@ class MessageHandler(object):
                 continue
 
             #if msg.type == "file":
+            if self.providing_server and self.providing_server not in msg.host:
+                continue
+
             self.logger.info("New message received: %s", str(msg))
             self.process(msg)
 
