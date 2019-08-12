@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2016 Trygve Aspenes
+# Copyright (c) 2016,2019 Trygve Aspenes
 
 # Author(s): Trygve Aspenes
 
@@ -27,10 +27,13 @@ import datetime as dt
 import logging
 import logging.handlers
 #import os.path
-import Queue
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 import time
 #from collections import OrderedDict
-from ConfigParser import NoOptionError, RawConfigParser
+from six.moves.configparser import NoOptionError, RawConfigParser
 
 #from posttroll import message, publisher
 from posttroll.listener import ListenerContainer
@@ -82,7 +85,7 @@ class MessageHandler(object):
             except KeyboardInterrupt:
                 self.stop()
                 continue
-            except Queue.Empty:
+            except queue.Empty:
                 continue
 
             #if msg.type == "file":
@@ -194,7 +197,7 @@ def main():
     config = RawConfigParser()
     config.read(args.config)
 
-    print "Setting timezone to UTC"
+    print("Setting timezone to UTC")
     os.environ["TZ"] = "UTC"
     time.tzset()
 
