@@ -52,17 +52,17 @@ class MessageHandler(object):
         topics = config.get(section, 'topics').split()
 
         try:
-            nameservers = config.get(section, 'nameservers')
-            nameservers = nameservers.split(',')
+            nameserver = config.get(section, 'nameserver')
+            # nameserver = nameservers.split(',')
         except (NoOptionError, ValueError):
-            nameservers = []
+            nameserver = 'localhost'
 
         try:
-            self.providing_server = config.get(section,'providing-server')
+            self.providing_server = config.get(section, 'providing-server')
         except:
             self.providing_server = None
 
-        self._listener = ListenerContainer(topics=topics)
+        self._listener = ListenerContainer(topics=topics, nameserver=nameserver)
         #self._parser = Parser(self._pattern)
 
     def set_logger(self, logger):
@@ -110,7 +110,7 @@ class MessageHandler(object):
             self.logger.debug("Unknown file, skipping.")
             return
 
-def read_from_queue(queue, logger):
+def read_from_queue(queue, logger, hosts):
     #read from queue
     while True:
         logger.debug("Start waiting for new message in queue qith queue size: {}".format(queue.qsize()))
@@ -128,29 +128,29 @@ def read_from_queue(queue, logger):
             import mysql.connector
             from mysql.connector import errorcode
             #print "Version: " + str(mysql.connector.__version__)
-
-            try:
-                cnx = mysql.connector.connect(user='polarsat', password='lilla land',
-                                              host='157.249.169.223',
-                                              database='pytrollmessages')
-                
-            except mysql.connector.Error as err:
-                if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                    print("Something is wrong with your user name or password")
-                elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                    print("Database does not exist")
-                else:
-                    print(err)
-            else:
-                message_insert = cnx.cursor(dictionary=True)
+            for host in hosts:
                 try:
-                    statement = "insert into messages (topic, datetime, msg_host, type, jdoc) value(\"{}\",\"{}\",\"{}\",\"{}\",'{}')".format(msg.subject, msg.time, msg.host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
-                    exed = message_insert.execute(statement)
-                    cnx.commit()
+                    cnx = mysql.connector.connect(user='polarsat', password='lilla land',
+                                                  host=host,
+                                                  database='pytrollmessages')
+                
                 except mysql.connector.Error as err:
-                    print("Failed insert message: {}".format(err))
-                finally:
-                    message_insert.close()
+                    if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+                        print("Something is wrong with your user name or password")
+                    elif err.errno == errorcode.ER_BAD_DB_ERROR:
+                        print("Database does not exist")
+                    else:
+                        print(err)
+                else:
+                    message_insert = cnx.cursor(dictionary=True)
+                    try:
+                        statement = "insert into messages (topic, datetime, msg_host, type, jdoc) value(\"{}\",\"{}\",\"{}\",\"{}\",'{}')".format(msg.subject, msg.time, msg.host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
+                        exed = message_insert.execute(statement)
+                        cnx.commit()
+                    except mysql.connector.Error as err:
+                        print("Failed insert message: {}".format(err))
+                    finally:
+                        message_insert.close()
 
         #logger.debug("{}".format())
 
@@ -222,9 +222,16 @@ def main():
     logging.getLogger("posttroll").setLevel(logging.INFO)
     logger = logging.getLogger("MessageHandler")
 
+    try:
+        logger.info("config item: %s", args.config_item)
+        logger.info("db_hosts %s ", config.get(args.config_item, 'db_hosts'))
+        db_hosts = config.get(args.config_item, 'db_hosts').split(",")
+    except:
+        logger.error("Failed to read db_hosts from config. use default")
+        db_hosts = ['157.249.169.223']
     queue=Queue()
 
-    queue_handler = Process(target=read_from_queue, args=(queue,logger,))
+    queue_handler = Process(target=read_from_queue, args=(queue, logger, db_hosts,))
     queue_handler.daemon=True
     queue_handler.start()
 
