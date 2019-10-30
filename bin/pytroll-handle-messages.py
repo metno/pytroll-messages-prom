@@ -115,10 +115,14 @@ class MessageHandler(object):
 
 def read_from_queue(queue, logger, hosts):
     #read from queue
+    orig_hosts = hosts
     while True:
         logger.debug("Start waiting for new message in queue qith queue size: {}".format(queue.qsize()))
         msg = queue.get()
-        logger.debug("Got new message. Queue size is now: {}".format(queue.qsize()))
+        logger.info("Got new message. Queue size is now: {}".format(queue.qsize()))
+        if queue.qsize() == 0 and hosts != orig_hosts:
+            hosts = orig_hosts
+            logger.info("Resetting hosts %s", str(hosts))
         logger.debug("Data   : {}".format(msg.data))
         logger.debug("Subject: {}".format(msg.subject))
         logger.debug("Type   : {}".format(msg.type))
@@ -130,28 +134,32 @@ def read_from_queue(queue, logger, hosts):
         if msg.type != "beat":
             import mysql.connector
             from mysql.connector import errorcode
-            #print "Version: " + str(mysql.connector.__version__)
+            # print "Version: " + str(mysql.connector.__version__)
             for host in hosts:
                 try:
                     cnx = mysql.connector.connect(user='polarsat', password='lilla land',
                                                   host=host,
-                                                  database='pytrollmessages')
-                
+                                                  database='pytrollmessages',
+                                                  connection_timeout=10)
+
                 except mysql.connector.Error as err:
+                    hosts.remove(host)
+                    logger.info("Hosts is now: %s after removing %s", str(hosts), host)
                     if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                        print("Something is wrong with your user name or password")
+                        logger.error("Something is wrong with your user name or password")
                     elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                        print("Database does not exist")
+                        logger.error("Database does not exist")
                     else:
-                        print(err)
+                        logger.error(err)
                 else:
                     message_insert = cnx.cursor(dictionary=True)
                     try:
                         statement = "insert into messages (topic, datetime, msg_host, type, jdoc) value(\"{}\",\"{}\",\"{}\",\"{}\",'{}')".format(msg.subject, msg.time, msg.host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
                         exed = message_insert.execute(statement)
                         cnx.commit()
+                        logger.info("Inserted into host %s", host)
                     except mysql.connector.Error as err:
-                        print("Failed insert message: {}".format(err))
+                        logger.error("Failed insert message: {}".format(err))
                     finally:
                         message_insert.close()
 
