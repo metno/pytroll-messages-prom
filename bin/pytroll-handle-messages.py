@@ -115,13 +115,13 @@ class MessageHandler(object):
 
 def read_from_queue(queue, logger, hosts):
     #read from queue
-    orig_hosts = hosts
+    orig_hosts = list(hosts)
     while True:
         logger.debug("Start waiting for new message in queue qith queue size: {}".format(queue.qsize()))
         msg = queue.get()
         logger.info("Got new message. Queue size is now: {}".format(queue.qsize()))
         if queue.qsize() == 0 and hosts != orig_hosts:
-            hosts = orig_hosts
+            hosts = list(orig_hosts)
             logger.info("Resetting hosts %s", str(hosts))
         logger.debug("Data   : {}".format(msg.data))
         logger.debug("Subject: {}".format(msg.subject))
