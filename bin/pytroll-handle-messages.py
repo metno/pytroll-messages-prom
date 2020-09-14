@@ -26,22 +26,26 @@
 import datetime as dt
 import logging
 import logging.handlers
-#import os.path
+# import os.path
 try:
     import queue
 except ImportError:
     import Queue as queue
 import time
-#from collections import OrderedDict
+# from collections import OrderedDict
 from six.moves.configparser import NoOptionError, RawConfigParser
 
-#from posttroll import message, publisher
+# from posttroll import message, publisher
 from posttroll.listener import ListenerContainer
-#from trollsift import Parser, compose
+# from trollsift import Parser, compose
 import os
-#import Process
+# import Process
 import json
 import posttroll.message
+
+import mysql.connector
+from mysql.connector import errorcode
+
 
 class MessageHandler(object):
 
@@ -113,11 +117,17 @@ class MessageHandler(object):
             self.logger.debug("Unknown file, skipping.")
             return
 
-def read_from_queue(queue, logger, hosts):
-    #read from queue
+
+def read_from_queue(queue, logger, hosts, data_points_before_write):
+    # read from queue
     orig_hosts = list(hosts)
+    message_data = {}
+    statement = "insert into messages (topic, datetime, msg_host, type, jdoc) values (%s, %s, %s, %s, %s)"
+    # set empty list for each hosts
+    for host in orig_hosts:
+        message_data[host] = []
     while True:
-        logger.debug("Start waiting for new message in queue qith queue size: {}".format(queue.qsize()))
+        logger.debug("Start waiting for new message in queue with queue size: {}".format(queue.qsize()))
         msg = queue.get()
         logger.info("Got new message. Queue size is now: {}".format(queue.qsize()))
         if queue.qsize() == 0 and hosts != orig_hosts:
@@ -132,36 +142,43 @@ def read_from_queue(queue, logger, hosts):
         logger.debug("Version: {}".format(msg.version))
 
         if msg.type != "beat":
-            import mysql.connector
-            from mysql.connector import errorcode
             # print "Version: " + str(mysql.connector.__version__)
+            message_data_point = (msg.subject, msg.time, msg.host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
+            logger.debug(message_data_point)
             for host in hosts:
-                try:
-                    cnx = mysql.connector.connect(user='polarsat', password='lilla land',
-                                                  host=host,
-                                                  database='pytrollmessages',
-                                                  connection_timeout=10)
-
-                except mysql.connector.Error as err:
-                    hosts.remove(host)
-                    logger.info("Hosts is now: %s after removing %s", str(hosts), host)
-                    if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                        logger.error("Something is wrong with your user name or password")
-                    elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                        logger.error("Database does not exist")
-                    else:
-                        logger.error(err)
-                else:
-                    message_insert = cnx.cursor(dictionary=True)
+                message_data[host].append(message_data_point)
+                if len(message_data[host]) > data_points_before_write:
+                    logger.debug("%s %s", host, str(message_data[host]))
+                    logger.info("Need to push data to db %s ...", str(host))
                     try:
-                        statement = "insert into messages (topic, datetime, msg_host, type, jdoc) value(\"{}\",\"{}\",\"{}\",\"{}\",'{}')".format(msg.subject, msg.time, msg.host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
-                        exed = message_insert.execute(statement)
-                        cnx.commit()
-                        logger.info("Inserted into host %s", host)
+                        cnx = mysql.connector.connect(user='polarsat', password='lilla land',
+                                                      host=host,
+                                                      database='pytrollmessages',
+                                                      connection_timeout=10)
+
                     except mysql.connector.Error as err:
-                        logger.error("Failed insert message: {}".format(err))
-                    finally:
-                        message_insert.close()
+                        hosts.remove(host)
+                        logger.info("Hosts is now: %s after removing %s", str(hosts), host)
+                        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+                            logger.error("Something is wrong with your user name or password")
+                        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+                            logger.error("Database does not exist")
+                        else:
+                            logger.error(err)
+                    else:
+                        message_insert = cnx.cursor(dictionary=True)
+                        try:
+                            # statement = "insert into messages (topic, datetime, msg_host, type, jdoc) value(\"{}\",\"{}\",\"{}\",\"{}\",'{}')".format(msg.subject, msg.time, msg.host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
+                            message_insert.executemany(statement, message_data[host])
+                            cnx.commit()
+                            logger.info("Inserted %d into host %s", message_insert.rowcount, host)
+                            message_data[host] = []
+                        except mysql.connector.Error as err:
+                            logger.error("Failed insert message: {}".format(err))
+                        finally:
+                            message_insert.close()
+                else:
+                    logger.info("Wait for more messages before writing to db. %s Got %d of %d.", str(host), len(message_data[host]), data_points_before_write)
 
         #logger.debug("{}".format())
 
@@ -177,6 +194,7 @@ def write_to_queue(msg, meta, queue):
     #msg.data['db_host'] = meta['db_host']
     queue.put(msg)
     #print "After write",queue.qsize()
+
 
 def arg_parse():
     '''Handle input arguments.
@@ -240,10 +258,12 @@ def main():
     except:
         logger.error("Failed to read db_hosts from config. use default")
         db_hosts = ['157.249.169.223']
-    queue=Queue()
+    queue = Queue()
 
-    queue_handler = Process(target=read_from_queue, args=(queue, logger, db_hosts,))
-    queue_handler.daemon=True
+    data_points_before_write = config.getint(args.config_item, 'data_points_before_write')
+
+    queue_handler = Process(target=read_from_queue, args=(queue, logger, db_hosts, data_points_before_write,))
+    queue_handler.daemon = True
     queue_handler.start()
 
     message_handler = MessageHandler(config, args.config_item, queue)
