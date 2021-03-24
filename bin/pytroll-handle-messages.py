@@ -23,6 +23,7 @@
 """Receive all messages in the system and insert them into a db
 """
 
+import threading
 import datetime as dt
 import logging
 import logging.handlers
@@ -118,9 +119,14 @@ class MessageHandler(object):
             return
 
 
+def reset_skip_hosts(skip_hosts):
+    skip_hosts.clear()
+
+
 def read_from_queue(queue, logger, hosts, data_points_before_write):
     # read from queue
     orig_hosts = list(hosts)
+    skip_hosts = []
     message_data = {}
     statement = "insert into messages (topic, datetime, msg_host, type, jdoc) values (%s, %s, %s, %s, %s)"
     # set empty list for each hosts
@@ -130,9 +136,9 @@ def read_from_queue(queue, logger, hosts, data_points_before_write):
         logger.debug("Start waiting for new message in queue with queue size: {}".format(queue.qsize()))
         msg = queue.get()
         logger.info("Got new message. Queue size is now: {}".format(queue.qsize()))
-        if queue.qsize() == 0 and hosts != orig_hosts:
-            hosts = list(orig_hosts)
-            logger.info("Resetting hosts %s", str(hosts))
+        # if queue.qsize() == 0 and hosts != orig_hosts:
+        #    hosts = list(orig_hosts)
+        #    logger.info("Resetting hosts %s", str(hosts))
         logger.debug("Data   : {}".format(msg.data))
         logger.debug("Subject: {}".format(msg.subject))
         logger.debug("Type   : {}".format(msg.type))
@@ -148,6 +154,9 @@ def read_from_queue(queue, logger, hosts, data_points_before_write):
             for host in hosts:
                 message_data[host].append(message_data_point)
                 if len(message_data[host]) > data_points_before_write:
+                    if host in skip_hosts:
+                        logger.info("Skipping host %s for now.", str(host))
+                        continue
                     logger.debug("%s %s", host, str(message_data[host]))
                     logger.info("Need to push data to db %s ...", str(host))
                     try:
@@ -157,8 +166,14 @@ def read_from_queue(queue, logger, hosts, data_points_before_write):
                                                       connection_timeout=10)
 
                     except mysql.connector.Error as err:
-                        hosts.remove(host)
-                        logger.info("Hosts is now: %s after removing %s", str(hosts), host)
+                        skip_hosts.append(host)
+                        # After 10 minutes reset the skip_hosts list
+                        t = threading.Timer(10 * 60, reset_skip_hosts, args=(skip_hosts, ))
+                        t.start()
+
+                        # hosts.remove(host)
+                        # logger.info("Hosts is now: %s after removing %s", str(hosts), host)
+                        logger.info("Skip hosts is now: %s", str(skip_hosts))
                         if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
                             logger.error("Something is wrong with your user name or password")
                         elif err.errno == errorcode.ER_BAD_DB_ERROR:
@@ -177,6 +192,7 @@ def read_from_queue(queue, logger, hosts, data_points_before_write):
                             logger.error("Failed insert message: {}".format(err))
                         finally:
                             message_insert.close()
+                            cnx.close()
                 else:
                     logger.info("Wait for more messages before writing to db. %s Got %d of %d.", str(host), len(message_data[host]), data_points_before_write)
 
