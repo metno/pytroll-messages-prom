@@ -281,6 +281,7 @@ def main():
     queue_handler = Process(target=read_from_queue, args=(queue, logger, db_hosts, data_points_before_write,))
     queue_handler.daemon = True
     queue_handler.start()
+    logger.info("queue handler pid %s", str(queue_handler.pid()))
 
     message_handler = MessageHandler(config, args.config_item, queue)
     message_handler.set_logger(logger)
