@@ -23,6 +23,7 @@
 """Receive all messages in the system and insert them into a db
 """
 
+import signal
 import threading
 import datetime as dt
 import logging
@@ -59,6 +60,9 @@ class MessageHandler(object):
         self._queue = queue
         topics = config.get(section, 'topics').split()
 
+        signal.signal(signal.SIGINT, self.stop)
+        signal.signal(signal.SIGTERM, self.stop)
+
         try:
             nameserver = config.get(section, 'nameserver')
             # nameserver = nameservers.split(',')
@@ -67,11 +71,11 @@ class MessageHandler(object):
 
         try:
             self.providing_server = config.get(section, 'providing-server')
-        except:
+        except Exception:
             self.providing_server = None
 
         self._listener = ListenerContainer(topics=topics, nameserver=nameserver)
-        #self._parser = Parser(self._pattern)
+        # self._parser = Parser(self._pattern)
 
     def set_logger(self, logger):
         """Set logger."""
@@ -105,7 +109,9 @@ class MessageHandler(object):
         self.logger.info("Stopping MessageHandler.")
         self._loop = False
         if self._listener is not None:
+            self.logger.info("Before listener stop")
             self._listener.stop()
+            self.logger.info("After listener stop")
 
     def process(self, msg):
         """Process message"""
@@ -196,20 +202,20 @@ def read_from_queue(queue, logger, hosts, data_points_before_write):
                 else:
                     logger.info("Wait for more messages before writing to db. %s Got %d of %d.", str(host), len(message_data[host]), data_points_before_write)
 
-        #logger.debug("{}".format())
+        # logger.debug("{}".format())
 
-        #print "READ FROM QUEUE:",msg
+        # print "READ FROM QUEUE:",msg
 
 def write_to_queue(msg, meta, queue):
-    #Write to queue
-    #print "WRITE TO QUEUE"
-    #print "Before write",queue.qsize()
-    #msg.data['db_database'] = meta['db_database']
-    #msg.data['db_passwd'] = meta['db_passwd']
-    #msg.data['db_user'] = meta['db_user']
-    #msg.data['db_host'] = meta['db_host']
+    # Write to queue
+    # print "WRITE TO QUEUE"
+    # print "Before write",queue.qsize()
+    # msg.data['db_database'] = meta['db_database']
+    # msg.data['db_passwd'] = meta['db_passwd']
+    # msg.data['db_user'] = meta['db_user']
+    # msg.data['db_host'] = meta['db_host']
     queue.put(msg)
-    #print "After write",queue.qsize()
+    # print "After write",queue.qsize()
 
 
 def arg_parse():
@@ -271,7 +277,7 @@ def main():
         logger.info("config item: %s", args.config_item)
         logger.info("db_hosts %s ", config.get(args.config_item, 'db_hosts'))
         db_hosts = config.get(args.config_item, 'db_hosts').split(",")
-    except:
+    except Exception:
         logger.error("Failed to read db_hosts from config. use default")
         db_hosts = ['157.249.169.223']
     queue = Queue()
@@ -287,8 +293,10 @@ def main():
     message_handler.set_logger(logger)
     message_handler.run()
 
+    logger.info("After message_handler.run()")
     queue_handler.terminate()
+    logger.info("After queue_handler.terminate()")
+
 
 if __name__ == "__main__":
     main()
-
