@@ -286,6 +286,7 @@ def main():
     message_handler.set_logger(logger)
     message_handler.run()
 
+    queue_handler.terminate()
 
 if __name__ == "__main__":
     main()
