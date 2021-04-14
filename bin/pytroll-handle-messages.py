@@ -60,8 +60,8 @@ class MessageHandler(object):
         self._queue = queue
         topics = config.get(section, 'topics').split()
 
-        signal.signal(signal.SIGINT, self.stop)
-        signal.signal(signal.SIGTERM, self.stop)
+        signal.signal(signal.SIGINT, self.signal_stop)
+        signal.signal(signal.SIGTERM, self.signal_stop)
 
         try:
             nameserver = config.get(section, 'nameserver')
@@ -103,6 +103,10 @@ class MessageHandler(object):
 
             self.logger.info("New message received: %s", str(msg))
             self.process(msg)
+
+    def signal_stop(self, signum, frame):
+        self.logger.info("SIGNAL stop signum %s and frame %s", str(signum), str(frame))
+        self.stop()
 
     def stop(self):
         """Stop MessageHandler."""
