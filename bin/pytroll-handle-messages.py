@@ -130,8 +130,10 @@ class MessageHandler(object):
 
 
 def reset_skip_hosts(skip_hosts):
-    skip_hosts.clear()
-
+    try:
+        skip_hosts.clear()
+    except AttributeError:
+        skip_hosts.pop()
 
 def read_from_queue(queue, logger, hosts, data_points_before_write):
     # read from queue
