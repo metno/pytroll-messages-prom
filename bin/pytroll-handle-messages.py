@@ -70,7 +70,7 @@ class MessageHandler(object):
             nameserver = 'localhost'
 
         try:
-            self.providing_server = config.get(section, 'providing-server')
+            self.providing_server = config.get(section, 'providing-server').split(" ")
         except Exception:
             self.providing_server = None
 
@@ -98,7 +98,7 @@ class MessageHandler(object):
                 continue
 
             #if msg.type == "file":
-            if self.providing_server and self.providing_server not in msg.host:
+            if self.providing_server and msg.host not in self.providing_server:
                 continue
 
             self.logger.info("New message received: %s", str(msg))
