@@ -98,7 +98,6 @@ class MessageHandler(object):
                 continue
 
             #if msg.type == "file":
-            self.logger.info("msg host %s and providig server %s", str(msg.host), str(self.providing_server))
             if self.providing_server and msg.host not in self.providing_server:
                 continue
 
