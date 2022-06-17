@@ -159,7 +159,7 @@ def read_from_queue(queue, logger, hosts, data_points_before_write):
         logger.debug("Binary : {}".format(msg.binary))
         logger.debug("Version: {}".format(msg.version))
 
-        if msg.type != "beat":
+        if msg.type != "beat" and msg.type != 'ack':
             # print "Version: " + str(mysql.connector.__version__)
             message_data_point = (msg.subject, msg.time, msg.host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
             logger.debug(message_data_point)
