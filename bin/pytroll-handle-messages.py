@@ -99,7 +99,7 @@ class MessageHandler(object):
 
             #if msg.type == "file":
             if self.providing_server and msg.host not in self.providing_server:
-                self.logger.debug("msg.host %s is not in providing server list.", str(msg.host))
+                self.logger.info("msg.host %s is not in providing server list.", str(msg.host))
                 continue
 
             self.logger.info("New message received: %s", str(msg))
