@@ -99,8 +99,12 @@ class MessageHandler(object):
                 continue
 
             #if msg.type == "file":
-            if self.providing_server and msg.host not in self.providing_server:
-                self.logger.info("msg.host %s is not in providing server list.", str(msg.host))
+            try:
+                msg_host = msg.host.split(".")[0]
+            except Exception:
+                msg_host = msg.host
+            if self.providing_server and msg_host not in self.providing_server:
+                self.logger.info("msg_host %s is not in providing server list.", str(msg_host))
                 continue
 
             self.logger.info("New message received: %s", str(msg))
