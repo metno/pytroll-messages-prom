@@ -169,7 +169,11 @@ def read_from_queue(queue, logger, hosts, data_points_before_write):
 
         if msg.type != "beat" and msg.type != 'ack':
             # print "Version: " + str(mysql.connector.__version__)
-            message_data_point = (msg.subject, msg.time, msg.host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
+            try:
+                msg_host = msg.host.split(".")[0]
+            except Exception:
+                msg_host = msg.host
+            message_data_point = (msg.subject, msg.time, msg_host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
             logger.debug(message_data_point)
             push_now = dt.datetime.now()
             for host in hosts:
