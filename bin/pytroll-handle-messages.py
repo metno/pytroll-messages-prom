@@ -84,6 +84,7 @@ class MessageHandler(object):
     def run(self):
         """Run MessageHandler"""
         self._loop = True
+        self.logger.info("providing server list %s", str(self.providing_server))
         while self._loop:
             # Check listener for new messages
             msg = None
@@ -140,11 +141,13 @@ def read_from_queue(queue, logger, hosts, data_points_before_write):
     # read from queue
     orig_hosts = list(hosts)
     skip_hosts = []
+    last_push = {}
     message_data = {}
     statement = "insert into messages (topic, datetime, msg_host, type, jdoc) values (%s, %s, %s, %s, %s)"
     # set empty list for each hosts
     for host in orig_hosts:
         message_data[host] = []
+        last_push[host] = dt.datetime.now()
     while True:
         logger.debug("Start waiting for new message in queue with queue size: {}".format(queue.qsize()))
         msg = queue.get()
@@ -164,9 +167,10 @@ def read_from_queue(queue, logger, hosts, data_points_before_write):
             # print "Version: " + str(mysql.connector.__version__)
             message_data_point = (msg.subject, msg.time, msg.host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
             logger.debug(message_data_point)
+            push_now = dt.datetime.now()
             for host in hosts:
                 message_data[host].append(message_data_point)
-                if len(message_data[host]) > data_points_before_write:
+                if len(message_data[host]) > data_points_before_write or last_push[host] + dt.timedelta(seconds=60) < push_now:
                     if host in skip_hosts:
                         logger.info("Skipping host %s for now.", str(host))
                         continue
@@ -206,6 +210,7 @@ def read_from_queue(queue, logger, hosts, data_points_before_write):
                         finally:
                             message_insert.close()
                             cnx.close()
+                    last_push[host] = dt.datetime.now()
                 else:
                     logger.info("Wait for more messages before writing to db. %s Got %d of %d.", str(host), len(message_data[host]), data_points_before_write)
 
