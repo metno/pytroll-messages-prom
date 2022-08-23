@@ -220,9 +220,12 @@ def main():
 
     args = arg_parse()
 
-    # Create a metric from message key start_time
-    start_http_server(8000)
+    config = None
+    if os.path.exists(args.config_file):
+        config = read_config(args.config_file, debug=False)
 
+    # Create a metric from message key start_time
+    start_http_server(config.get('prometheus_client_port', 8000))
     print("Setting timezone to UTC")
     os.environ["TZ"] = "UTC"
     time.tzset()
@@ -252,10 +255,6 @@ def main():
     logger = logging.getLogger("MessageHandler")
 
     listener_queue = queue.Queue()
-
-    config = None
-    if os.path.exists(args.config_file):
-        config = read_config(args.config_file, debug=False)
 
     listener = Listener(listener_queue, config, logger)
     listener.start()
