@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2018 Trygve Aspenes
+# Copyright (c) 2022
 
 # Author(s):
 
-#   Martin Raspaud <trygveas@met.no>
+#   Trygve Aspenes <trygveas@met.no>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,5 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Version file.
+"""The place where everything starts :)
 """
-
-__version__ = "0.1.0"

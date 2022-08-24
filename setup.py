@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2018 Trygve Aspenenes
+# Copyright (c) 2012 Trygve Aspenenes
 
 # Author(s):
 
@@ -20,17 +20,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Setup for pytroll_handle messages.
+"""Setup for pytroll_messages_prom.
 """
 from setuptools import setup
 import imp
 
 version = imp.load_source(
-    'handle_messages.version', 'handle_messages/version.py')
+    'messages_prom.version', 'messages_prom/version.py')
 
-setup(name="pytroll_handle_messages",
+setup(name="pytroll_messages_prom",
       version=version.__version__,
-      description='Pytroll handle messages',
+      description='Pytroll messages prom',
       author='Trygve Aspenes',
       author_email='trygveas@met.no',
       classifiers=["Development Status :: 3 - Alpha",
@@ -41,13 +41,12 @@ setup(name="pytroll_handle_messages",
                    "Programming Language :: Python",
                    "Topic :: Scientific/Engineering"],
       url="",
-      packages=['handle_messages',],
-      scripts=['bin/pytroll-handle-messages.py',
+      packages=['messages_prom',],
+      scripts=['bin/pytroll-messages-prom.py',
                ],
       data_files=[],
       zip_safe=False,
-      install_requires=['posttroll', 'trollsift', 'netifaces',
-                        ],
+      install_requires=['posttroll', 'prometheus_client',],
       tests_require=[],
       test_suite='',
       )

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2018 Trygve Aspenes
+# Copyright (c) 2022
 
 # Author(s):
 
@@ -20,5 +20,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""The place where everything starts :)
+"""Version file.
 """
+
+__version__ = "0.1.0"
