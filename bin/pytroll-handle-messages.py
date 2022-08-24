@@ -24,26 +24,17 @@
 available as metrics in an endpoint.
 """
 
-from typing import Collection
-from posttroll.subscriber import Subscribe
+import os
+import time
 import yaml
-from threading import Thread
 import logging
 import logging.handlers
-# import os.path
+from threading import Thread
+from posttroll.subscriber import Subscribe
 try:
     import queue
 except ImportError:
     import Queue as queue
-import time
-
-# from posttroll import message, publisher
-from posttroll.listener import ListenerContainer
-# from trollsift import Parser, compose
-import os
-# import Process
-import json
-import posttroll.message
 
 from prometheus_client import start_http_server, Counter, Gauge
 
@@ -70,7 +61,6 @@ class Listener(Thread):
         self.loop = True
         self.queue = queue
         self.config = config
-        #self.subscribe_nameserver = subscribe_nameserver
         self.logger = logger
 
     def stop(self):
@@ -80,7 +70,6 @@ class Listener(Thread):
         self.queue.put(None)
 
     def run(self):
-        print("HER")
         self.logger.debug("Entering run in FileListener ...")
         if type(self.config["subscribe-topic"]) not in (tuple, list, set):
             self.config["subscribe-topic"] = [self.config["subscribe-topic"]]
@@ -98,29 +87,20 @@ class Listener(Thread):
                 self.logger.debug("Entering for loop subscr.recv")
                 for msg in subscr.recv(timeout=1):
                     if not self.loop:
-                        # self.logger.debug("Self.loop false in FileListener {}".format(self.loop))
+                        self.logger.warning("Self.loop false in FileListener %s. Breaking.", str(self.loop))
                         break
 
-                    # self.logger.debug("Before checking message.")
-                    # Check if it is a relevant message:
-                    if self.check_message(msg):
-                        self.logger.info("Put the message on the queue...")
-                        self.logger.debug("Message = " + str(msg))
-                        self.queue.put(msg)
-                        self.logger.debug("After queue put.")
-                    # else:
-                    #     self.logger.warning("check_message returned False for some reason. Message is: %s", str(msg))
+                    if not msg:
+                        continue
+
+                    self.logger.info("Put the message on the queue...")
+                    self.logger.debug("Message = " + str(msg))
+                    self.queue.put(msg)
+                    self.logger.debug("After queue put.")
 
         except KeyError as ke:
             self.logger.info("Some key error. probably in config:", ke)
             raise
-
-    def check_message(self, msg):
-
-        if not msg:
-            return False
-        return True
-
 
 def read_from_queue(queue, logger):
     # read from queue
@@ -130,21 +110,8 @@ def read_from_queue(queue, logger):
             msg = queue.get()
             logger.info("Got new message. Queue size is now: {}".format(queue.qsize()))
             logger.debug("%s", str(msg))
-            if msg.type != "beat" and msg.type != 'ack' and msg.type != 'info':
-                logger.debug("Data   : {}".format(msg.data))
-                logger.debug("Subject: {}".format(msg.subject))
-                logger.debug("Type   : {}".format(msg.type))
-                logger.debug("Sender : {}".format(msg.sender))
-                logger.debug("Time   : {}".format(msg.time))
-                logger.debug("Binary : {}".format(msg.binary))
-                logger.debug("Version: {}".format(msg.version))
-                try:
-                    msg_host = msg.host.split(".")[0]
-                except Exception:
-                    msg_host = msg.host
-                message_data_point = (msg.subject, msg.time, msg_host, msg.type, json.dumps(msg.data, default=posttroll.message.datetime_encoder))
-                logger.debug(message_data_point)
-                #dt = json.dumps(msg.data, default=posttroll.message.datetime_encoder)
+            if msg.type != "beat" and msg.type != 'info':
+
                 start_time = msg.data['start_time'].timestamp()
                 try:
                     end_time = msg.data['start_time'].timestamp()
@@ -168,6 +135,24 @@ def read_from_queue(queue, logger):
                 MESSAGE_REGISTER_TIME.labels(message_type=msg.type, topic=msg.subject).set_to_current_time()
                 MESSAGE_NUMBER_OF_FILES.labels(message_type=msg.type, topic=msg.subject).set(number_of_files)
                 MESSAGE_NUMBER_OF.labels(message_type=msg.type, topic=msg.subject).inc()
+            elif msg.type == 'beat' or msg.type == 'info':
+                try:
+                    MESSAGE_REGISTER_TIME.labels(message_type=msg.type, topic=msg.subject).set_to_current_time()
+                    MESSAGE_NUMBER_OF.labels(message_type=msg.type, topic=msg.subject).inc()
+                except Exception:
+                    pass
+            else:
+                try:
+                    logger.warning("Unknown message type:")
+                    logger.warning("Data   : {}".format(msg.data))
+                    logger.warning("Subject: {}".format(msg.subject))
+                    logger.warning("Type   : {}".format(msg.type))
+                    logger.warning("Sender : {}".format(msg.sender))
+                    logger.warning("Time   : {}".format(msg.time))
+                    logger.warning("Binary : {}".format(msg.binary))
+                    logger.warning("Version: {}".format(msg.version))
+                except Exception:
+                    pass
         except KeyboardInterrupt:
             logger.info("Received keyboard interrupt. Shutting down.")
             break
@@ -184,12 +169,6 @@ def arg_parse():
     parser.add_argument("-v", "--verbose", help="print debug messages too",
                         action="store_true")
     parser.add_argument("-c", "--config-file", help="config file to be used")
-    parser.add_argument("-C", "--config_item", help="config item to use")
-    parser.add_argument("-r", "--subscribe-nameserver",
-                        type=str,
-                        dest='subscribe_nameserver',
-                        default="localhost",
-                        help="subscribe nameserver, defaults to localhost")
 
     return parser.parse_args()
 
@@ -216,8 +195,6 @@ def read_config(filename, debug=True):
 def main():
     '''Main. Parse cmdline, read config etc.'''
 
-    from multiprocessing import Process, Queue
-
     args = arg_parse()
 
     config = None
@@ -226,6 +203,7 @@ def main():
 
     # Create a metric from message key start_time
     start_http_server(config.get('prometheus_client_port', 8000))
+    
     print("Setting timezone to UTC")
     os.environ["TZ"] = "UTC"
     time.tzset()
@@ -261,7 +239,7 @@ def main():
     read_from_queue(listener_queue, logger)
 
     logger.info("After message_handler.run()")
-    listener.terminate()
+    listener.stop()
     logger.info("After queue_handler.terminate()")
 
 
