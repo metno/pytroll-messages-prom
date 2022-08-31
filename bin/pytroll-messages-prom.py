@@ -25,7 +25,6 @@ available as metrics in an endpoint.
 """
 
 import os
-from platform import platform
 import time
 import yaml
 import logging
