@@ -54,6 +54,8 @@ MESSAGE_NUMBER_OF = Counter('posttroll_message_counter',
                             'Number of messages of this type since endpoint restart',
                             ['message_type', 'topic', 'platform_name'])
 
+sat_tr = {'Metop-B': 'metop-b',
+          'Metop-C': 'metop-c'}
 class Listener(Thread):
 
     def __init__(self, queue, config, logger):
@@ -131,7 +133,7 @@ def read_from_queue(queue, logger):
                             number_of_files = 0
                 platform_name = "unknown"
                 try:
-                    platform_name = msg.data['platform_name']
+                    platform_name = sat_tr.get(msg.data['platform_name'], msg.data['platform_name'])
                 except KeyError:
                     pass
                 MESSAGE_START_TIME.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).set(start_time)
