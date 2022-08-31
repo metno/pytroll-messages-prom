@@ -55,7 +55,11 @@ MESSAGE_NUMBER_OF = Counter('posttroll_message_counter',
                             ['message_type', 'topic', 'platform_name'])
 
 sat_tr = {'Metop-B': 'metop-b',
-          'Metop-C': 'metop-c'}
+          'M01': 'metop-b',
+          'Metop-C': 'metop-c',
+          'M03': 'metop-c',
+          'NOAA-20': 'noaa 20',
+          'Suomi-NPP': 'suomi npp'}
 class Listener(Thread):
 
     def __init__(self, queue, config, logger):
