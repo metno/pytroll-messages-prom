@@ -25,6 +25,7 @@ available as metrics in an endpoint.
 """
 
 import os
+from platform import platform
 import time
 import yaml
 import logging
@@ -40,19 +41,19 @@ from prometheus_client import start_http_server, Counter, Gauge
 
 MESSAGE_START_TIME = Gauge('posttroll_message_start_time_seconds',
                            'Start time of the data usually parsed from the filename',
-                           ['message_type', 'topic'])
+                           ['message_type', 'topic', 'platform_name'])
 MESSAGE_END_TIME = Gauge('posttroll_message_end_time_seconds',
                            'End time of the data usually parsed from the filename',
-                           ['message_type', 'topic'])
+                           ['message_type', 'topic', 'platform_name'])
 MESSAGE_REGISTER_TIME = Gauge('posttroll_message_register_time_seconds',
                               'When the last message was registered at the end point',
-                              ['message_type', 'topic'])
+                              ['message_type', 'topic', 'platform_name'])
 MESSAGE_NUMBER_OF_FILES = Gauge('posttroll_message_number_of_files_count',
                                 'number of files in file, dataset or collection',
-                                ['message_type', 'topic'])
+                                ['message_type', 'topic', 'platform_name'])
 MESSAGE_NUMBER_OF = Counter('posttroll_message_counter',
                             'Number of messages of this type since endpoint restart',
-                            ['message_type', 'topic'])
+                            ['message_type', 'topic', 'platform_name'])
 
 class Listener(Thread):
 
@@ -129,12 +130,16 @@ def read_from_queue(queue, logger):
                             number_of_files = len(msg.data['collection'])
                         except KeyError:
                             number_of_files = 0
-
-                MESSAGE_START_TIME.labels(message_type=msg.type, topic=msg.subject).set(start_time)
-                MESSAGE_END_TIME.labels(message_type=msg.type, topic=msg.subject).set(end_time)
-                MESSAGE_REGISTER_TIME.labels(message_type=msg.type, topic=msg.subject).set_to_current_time()
-                MESSAGE_NUMBER_OF_FILES.labels(message_type=msg.type, topic=msg.subject).set(number_of_files)
-                MESSAGE_NUMBER_OF.labels(message_type=msg.type, topic=msg.subject).inc()
+                platform_name = "unknown"
+                try:
+                    platform_name = msg.data['platform_name']
+                except KeyError:
+                    pass
+                MESSAGE_START_TIME.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).set(start_time)
+                MESSAGE_END_TIME.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).set(end_time)
+                MESSAGE_REGISTER_TIME.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).set_to_current_time()
+                MESSAGE_NUMBER_OF_FILES.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).set(number_of_files)
+                MESSAGE_NUMBER_OF.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).inc()
             elif msg.type == 'beat' or msg.type == 'info':
                 try:
                     MESSAGE_REGISTER_TIME.labels(message_type=msg.type, topic=msg.subject).set_to_current_time()
