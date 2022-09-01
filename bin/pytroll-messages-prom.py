@@ -59,6 +59,11 @@ sat_tr = {'Metop-B': 'metop-b',
           'Metop-C': 'metop-c',
           'M03': 'metop-c',
           'NOAA-20': 'noaa 20',
+          'NOAA 20': 'noaa 20',
+          'NOAA-19': 'noaa 19',
+          'NOAA 19': 'noaa 19',
+          'NOAA-18': 'noaa 18',
+          'NOAA 18': 'noaa 18',
           'Suomi-NPP': 'suomi npp'}
 class Listener(Thread):
 
