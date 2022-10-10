@@ -68,7 +68,9 @@ sat_tr = {'Metop-B': 'metop-b',
           'EOS-Terra': 'terra',
           'EOS-Aqua': 'aqua',
           'MOD': 'terra',
-          'MYD': 'aqua'}
+          'MYD': 'aqua',
+          'FY3D': 'fengyun 3d',
+          'Fengyun-3D': 'fengyun 3d'}
 class Listener(Thread):
 
     def __init__(self, queue, config, logger):
