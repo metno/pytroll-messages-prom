@@ -64,7 +64,11 @@ sat_tr = {'Metop-B': 'metop-b',
           'NOAA 19': 'noaa 19',
           'NOAA-18': 'noaa 18',
           'NOAA 18': 'noaa 18',
-          'Suomi-NPP': 'suomi npp'}
+          'Suomi-NPP': 'suomi npp',
+          'EOS-Terra': 'terra',
+          'EOS-Aqua': 'aqua',
+          'MOD': 'terra',
+          'MYD': 'aqua'}
 class Listener(Thread):
 
     def __init__(self, queue, config, logger):
