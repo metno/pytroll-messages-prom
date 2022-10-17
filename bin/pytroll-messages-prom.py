@@ -134,8 +134,11 @@ def read_from_queue(queue, logger):
                 try:
                     start_time = msg.data['start_time'].timestamp()
                 except KeyError:
-                    logger.error(f"Failed to get start time from message: {str(msg.data)}")
-                    continue
+                    try:
+                        start_time = msg.data['nominal_time'].timestamp()
+                    except KeyError:
+                        logger.error(f"Failed to get start/nominal time from message: {str(msg.data)}")
+                        continue
                 try:
                     end_time = msg.data['start_time'].timestamp()
                 except Exception:
