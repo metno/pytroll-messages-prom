@@ -55,8 +55,10 @@ MESSAGE_NUMBER_OF = Counter('posttroll_message_counter',
                             ['message_type', 'topic', 'platform_name'])
 
 sat_tr = {'Metop-B': 'metop-b',
+          'METOPB': 'metop-b',
           'M01': 'metop-b',
           'Metop-C': 'metop-c',
+          'METOPC': 'metop-c',
           'M03': 'metop-c',
           'NOAA-20': 'noaa 20',
           'NOAA 20': 'noaa 20',
