@@ -131,7 +131,11 @@ def read_from_queue(queue, logger):
             logger.debug("%s", str(msg))
             if msg.type != "beat" and msg.type != 'info':
 
-                start_time = msg.data['start_time'].timestamp()
+                try:
+                    start_time = msg.data['start_time'].timestamp()
+                except KeyError:
+                    logger.error(f"Failed to get start time from message: {str(msg.data)}")
+                    continue
                 try:
                     end_time = msg.data['start_time'].timestamp()
                 except Exception:
