@@ -62,17 +62,26 @@ sat_tr = {'Metop-B': 'metop-b',
           'M03': 'metop-c',
           'NOAA-20': 'noaa 20',
           'NOAA 20': 'noaa 20',
+          'NOAA20': 'noaa 20',
           'NOAA-19': 'noaa 19',
           'NOAA 19': 'noaa 19',
           'NOAA-18': 'noaa 18',
           'NOAA 18': 'noaa 18',
           'Suomi-NPP': 'suomi npp',
+          'NPP': 'suomi npp',
+          'snpp': 'suomi npp',
           'EOS-Terra': 'terra',
           'EOS-Aqua': 'aqua',
           'MOD': 'terra',
           'MYD': 'aqua',
           'FY3D': 'fengyun 3d',
-          'Fengyun-3D': 'fengyun 3d'}
+          'Fengyun-3D': 'fengyun 3d',
+          'S3A': 'sentinel 3a',
+          'S3B': 'sentinel 3b',
+          'DK01': 'himawari 8',
+          'G16': 'goes 16',
+          'G17': 'goes 17',
+          'G18': 'goes 18'}
 class Listener(Thread):
 
     def __init__(self, queue, config, logger):
