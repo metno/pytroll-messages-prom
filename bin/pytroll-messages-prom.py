@@ -30,9 +30,9 @@ import time
 import yaml
 import atexit
 import signal
+import pickle
 import logging
 import logging.handlers
-from copyreg import pickle
 from threading import Thread
 from datetime import datetime
 from posttroll.subscriber import Subscribe
