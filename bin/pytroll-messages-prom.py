@@ -25,9 +25,11 @@ available as metrics in an endpoint.
 """
 
 import os
+import sys
 import time
 import yaml
 import atexit
+import signal
 import logging
 import logging.handlers
 from copyreg import pickle
@@ -282,6 +284,10 @@ def save_status_file(logger, status_file, latest_status):
         pickle.dump(latest_status, ps)
         logger.info("Wrote status file: %s", status_file)
     
+def signal_handler(signo, frame):
+    print(f"signal_handler called with signal: {signo}")
+    sys.exit(0)
+
 def main():
     '''Main. Parse cmdline, read config etc.'''
 
@@ -322,7 +328,7 @@ def main():
     latest_status = {}
     status_file = "/tmp/latest-messages-prom-status"
     atexit.register(save_status_file, logger, status_file, latest_status)
-
+    signal.signal(signal.SIGTERM, signal_handler)
     # Create a metric from message key start_time
     start_http_server(config.get('prometheus_client_port', 8000))
 
