@@ -136,7 +136,7 @@ class Listener(Thread):
                         continue
 
                     self.logger.info("Put the message on the queue...")
-                    self.logger.debug("Message = " + str(msg))
+                    #self.logger.debug("Message = " + str(msg))
                     self.queue.put(msg)
                     self.logger.debug("After queue put.")
 
@@ -172,16 +172,19 @@ def _init_from_startup_status(startup_status):
                 MESSAGE_NUMBER_OF.labels(message_type=message_type, topic=message_subject, platform_name=pn).inc()
     return
 
-def read_from_queue(queue, logger, startup_status, latest_status):
+def read_from_queue(listener_queue, logger, startup_status, latest_status):
     # read from queue
     _init_from_startup_status(startup_status)                
     # Resetting latest status to avoid unwanted metrics
     while True:
         try:
-            logger.debug("Start waiting for new message in queue with queue size: {}".format(queue.qsize()))
-            msg = queue.get()
-            logger.info("Got new message. Queue size is now: {}".format(queue.qsize()))
-            logger.debug("%s", str(msg))
+            logger.debug("Start waiting for new message in queue with queue size: {}".format(listener_queue.qsize()))
+            try:
+                msg = listener_queue.get(timeout=60)
+            except queue.Empty:
+                continue
+            logger.info("Got new message. Queue size is now: {}".format(listener_queue.qsize()))
+            #logger.debug("%s", str(msg))
             if msg.type != "beat" and msg.type != 'info':
 
                 try:
@@ -242,6 +245,9 @@ def read_from_queue(queue, logger, startup_status, latest_status):
         except KeyboardInterrupt:
             logger.info("Received keyboard interrupt. Shutting down.")
             break
+        except SystemExit:
+            logger.info("Received System Exit interrupt. Shutting down.")
+            break
 
 def arg_parse():
     '''Handle input arguments.
@@ -278,17 +284,17 @@ def read_config(filename, debug=True):
 
     return config
 
-def save_status_file(status_file, latest_status):
-    print("Start writing status file.")
+def save_status_file(logger, status_file, latest_status):
+    logger.info("Start writing status file.")
     with open(status_file, "wb") as ps:
         pickle.dump(latest_status, ps)
-        print(f"Wrote status file: {status_file}")
+        logger.info(f"Wrote status file: {status_file}")
     
 def signal_handler(signo, frame):
     print(f"signal_handler called with signal: {signo}")
-    sys.exit(0)
+    raise SystemExit
 
-def main(latest_status, status_file):
+def main():
     '''Main. Parse cmdline, read config etc.'''
 
     args = arg_parse()
@@ -328,11 +334,17 @@ def main(latest_status, status_file):
     # Create a metric from message key start_time
     start_http_server(config.get('prometheus_client_port', 8000))
 
+    signal.signal(signal.SIGTERM, signal_handler)
+    latest_status = {}
+    status_file = "/tmp/latest-messages-prom-status"
+    atexit.register(save_status_file, logger, status_file, latest_status)
+
     listener_queue = queue.Queue()
     startup_status = {}
     if os.path.exists(status_file):
          with open(status_file, "rb") as ps:
              startup_status = pickle.load(ps)
+             logger.info("Read latest status file %s", status_file)
     else:
         logger.info("No latest status file found at startup: %s. Start with empty status.", status_file)
     listener = Listener(listener_queue, config, logger)
@@ -347,8 +359,4 @@ def main(latest_status, status_file):
 
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGTERM, signal_handler)
-    latest_status = {}
-    status_file = "/tmp/latest-messages-prom-status"
-    atexit.register(save_status_file, status_file, latest_status)
-    main(latest_status, status_file)
+    main()
