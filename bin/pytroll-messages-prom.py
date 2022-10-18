@@ -278,17 +278,17 @@ def read_config(filename, debug=True):
 
     return config
 
-def save_status_file(logger, status_file, latest_status):
-    logger.info("Start writing status file.")
+def save_status_file(status_file, latest_status):
+    print("Start writing status file.")
     with open(status_file, "wb") as ps:
         pickle.dump(latest_status, ps)
-        logger.info("Wrote status file: %s", status_file)
+        print(f"Wrote status file: {status_file}")
     
 def signal_handler(signo, frame):
     print(f"signal_handler called with signal: {signo}")
     sys.exit(0)
 
-def main():
+def main(latest_status, status_file):
     '''Main. Parse cmdline, read config etc.'''
 
     args = arg_parse()
@@ -325,10 +325,6 @@ def main():
     logging.getLogger("posttroll").setLevel(logging.INFO)
     logger = logging.getLogger("MessageHandler")
 
-    latest_status = {}
-    status_file = "/tmp/latest-messages-prom-status"
-    atexit.register(save_status_file, logger, status_file, latest_status)
-    signal.signal(signal.SIGTERM, signal_handler)
     # Create a metric from message key start_time
     start_http_server(config.get('prometheus_client_port', 8000))
 
@@ -351,4 +347,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    signal.signal(signal.SIGTERM, signal_handler)
+    latest_status = {}
+    status_file = "/tmp/latest-messages-prom-status"
+    atexit.register(save_status_file, status_file, latest_status)
+    main(latest_status, status_file)
