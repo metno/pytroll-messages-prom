@@ -24,6 +24,8 @@
 available as metrics in an endpoint.
 """
 
+from copyreg import pickle
+from datetime import datetime
 import os
 import time
 import yaml
@@ -64,7 +66,9 @@ sat_tr = {'Metop-B': 'metop-b',
           'M03': 'metop-c',
           'NOAA-20': 'noaa 20',
           'NOAA 20': 'noaa 20',
+          'noaa 20': 'noaa 20',
           'NOAA20': 'noaa 20',
+          'N20': 'noaa 20',
           'NOAA-19': 'noaa 19',
           'NOAA 19': 'noaa 19',
           'NOAA-18': 'noaa 18',
@@ -73,17 +77,22 @@ sat_tr = {'Metop-B': 'metop-b',
           'NPP': 'suomi npp',
           'snpp': 'suomi npp',
           'EOS-Terra': 'terra',
+          'TERRA': 'terra',
           'EOS-Aqua': 'aqua',
+          'AQUA': 'aqua',
           'MOD': 'terra',
           'MYD': 'aqua',
           'FY3D': 'fengyun 3d',
+          'FY3C': 'fengyun 3c',
           'Fengyun-3D': 'fengyun 3d',
+          'fy3d': 'fengyun 3d',
           'S3A': 'sentinel 3a',
           'S3B': 'sentinel 3b',
           'DK01': 'himawari 8',
           'G16': 'goes 16',
           'G17': 'goes 17',
           'G18': 'goes 18'}
+
 class Listener(Thread):
 
     def __init__(self, queue, config, logger):
@@ -132,8 +141,38 @@ class Listener(Thread):
             self.logger.info("Some key error. probably in config:", ke)
             raise
 
-def read_from_queue(queue, logger):
+def _update_latest_status(msg, latest_status, platform_name, start_time, end_time, number_of_files):
+    if msg.type not in latest_status:
+        latest_status[msg.type] = {}
+    if msg.subject not in latest_status[msg.type]:
+        latest_status[msg.type][msg.subject] = {}
+    if platform_name not in latest_status[msg.type][msg.subject]:
+        latest_status[msg.type][msg.subject][platform_name] = {}
+    latest_status[msg.type][msg.subject][platform_name]['start_time'] = start_time
+    latest_status[msg.type][msg.subject][platform_name]['end_time'] = end_time
+    latest_status[msg.type][msg.subject][platform_name]['current_time'] = datetime.now().timestamp()
+    latest_status[msg.type][msg.subject][platform_name]['number_of_files'] = number_of_files
+    return
+
+def _init_from_startup_status(startup_status):
+    for message_type in startup_status:
+        for message_subject in startup_status[message_type]:
+            for pn in startup_status[message_type][message_subject]:
+                MESSAGE_START_TIME.labels(message_type=message_type, topic=message_subject, platform_name=pn).set(
+                    startup_status[message_type][message_subject][pn]['start_time'])
+                MESSAGE_END_TIME.labels(message_type=message_type, topic=message_subject, platform_name=pn).set(
+                                        startup_status[message_type][message_subject][pn]['end_time'])
+                MESSAGE_REGISTER_TIME.labels(message_type=message_type, topic=message_subject, platform_name=pn).set(
+                                        startup_status[message_type][message_subject][pn]['current_time'])                    
+                MESSAGE_NUMBER_OF_FILES.labels(message_type=message_type, topic=message_subject, platform_name=pn).set(
+                                        startup_status[message_type][message_subject][pn]['number_of_files'])                    
+                MESSAGE_NUMBER_OF.labels(message_type=message_type, topic=message_subject, platform_name=pn).inc()
+    return
+
+def read_from_queue(queue, logger, startup_status, latest_status):
     # read from queue
+    _init_from_startup_status(startup_status)                
+    # Resetting latest status to avoid unwanted metrics
     while True:
         try:
             logger.debug("Start waiting for new message in queue with queue size: {}".format(queue.qsize()))
@@ -176,6 +215,9 @@ def read_from_queue(queue, logger):
                 MESSAGE_REGISTER_TIME.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).set_to_current_time()
                 MESSAGE_NUMBER_OF_FILES.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).set(number_of_files)
                 MESSAGE_NUMBER_OF.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).inc()
+
+                _update_latest_status(msg, latest_status, platform_name, start_time, end_time, number_of_files)
+                    
             elif msg.type == 'beat' or msg.type == 'info':
                 try:
                     MESSAGE_REGISTER_TIME.labels(message_type=msg.type, topic=msg.subject).set_to_current_time()
@@ -274,11 +316,24 @@ def main():
     logger = logging.getLogger("MessageHandler")
 
     listener_queue = queue.Queue()
-
+    status_file = "/tmp/latest-messages-prom-status"
+    startup_status = {}
+    if os.path.exists(status_file):
+         with open(status_file, "rb") as ps:
+             startup_status = pickle. load(ps)
+    else:
+        logger.info("No latest status file found at startup: %s. Start with empty status.", status_file)
     listener = Listener(listener_queue, config, logger)
     listener.start()
-    read_from_queue(listener_queue, logger)
+    latest_status = {}
+    read_from_queue(listener_queue, logger, startup_status, latest_status)
 
+    logger.info("Exit from read queue")
+    
+    with open(status_file, "wb") as ps:
+        pickle.dump(latest_status, ps)
+        logger.info("Wrote status file: %s", status_file)
+    
     logger.info("After message_handler.run()")
     listener.stop()
     logger.info("After queue_handler.terminate()")
