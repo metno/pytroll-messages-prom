@@ -291,12 +291,6 @@ def main():
     if os.path.exists(args.config_file):
         config = read_config(args.config_file, debug=False)
 
-    latest_status = {}
-    atexit.register(save_status_file, logger, status_file, latest_status)
-
-    # Create a metric from message key start_time
-    start_http_server(config.get('prometheus_client_port', 8000))
-    
     print("Setting timezone to UTC")
     os.environ["TZ"] = "UTC"
     time.tzset()
@@ -324,6 +318,12 @@ def main():
 
     logging.getLogger("posttroll").setLevel(logging.INFO)
     logger = logging.getLogger("MessageHandler")
+
+    latest_status = {}
+    atexit.register(save_status_file, logger, status_file, latest_status)
+
+    # Create a metric from message key start_time
+    start_http_server(config.get('prometheus_client_port', 8000))
 
     listener_queue = queue.Queue()
     status_file = "/tmp/latest-messages-prom-status"
