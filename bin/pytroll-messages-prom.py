@@ -277,6 +277,7 @@ def read_config(filename, debug=True):
     return config
 
 def save_status_file(logger, status_file, latest_status):
+    logger.info("Start writing status file.")
     with open(status_file, "wb") as ps:
         pickle.dump(latest_status, ps)
         logger.info("Wrote status file: %s", status_file)
@@ -289,6 +290,9 @@ def main():
     config = None
     if os.path.exists(args.config_file):
         config = read_config(args.config_file, debug=False)
+
+    latest_status = {}
+    atexit.register(save_status_file, logger, status_file, latest_status)
 
     # Create a metric from message key start_time
     start_http_server(config.get('prometheus_client_port', 8000))
@@ -326,13 +330,11 @@ def main():
     startup_status = {}
     if os.path.exists(status_file):
          with open(status_file, "rb") as ps:
-             startup_status = pickle. load(ps)
+             startup_status = pickle.load(ps)
     else:
         logger.info("No latest status file found at startup: %s. Start with empty status.", status_file)
     listener = Listener(listener_queue, config, logger)
     listener.start()
-    latest_status = {}
-    atexit.register(save_status_file, logger, status_file, latest_status)
     read_from_queue(listener_queue, logger, startup_status, latest_status)
 
     logger.info("Exit from read queue")
