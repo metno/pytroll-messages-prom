@@ -24,14 +24,15 @@
 available as metrics in an endpoint.
 """
 
-from copyreg import pickle
-from datetime import datetime
 import os
 import time
 import yaml
+import atexit
 import logging
 import logging.handlers
+from copyreg import pickle
 from threading import Thread
+from datetime import datetime
 from posttroll.subscriber import Subscribe
 try:
     import queue
@@ -275,6 +276,11 @@ def read_config(filename, debug=True):
 
     return config
 
+def save_status_file(logger, status_file, latest_status):
+    with open(status_file, "wb") as ps:
+        pickle.dump(latest_status, ps)
+        logger.info("Wrote status file: %s", status_file)
+    
 def main():
     '''Main. Parse cmdline, read config etc.'''
 
@@ -326,13 +332,10 @@ def main():
     listener = Listener(listener_queue, config, logger)
     listener.start()
     latest_status = {}
+    atexit.register(save_status_file, logger, status_file, latest_status)
     read_from_queue(listener_queue, logger, startup_status, latest_status)
 
     logger.info("Exit from read queue")
-    
-    with open(status_file, "wb") as ps:
-        pickle.dump(latest_status, ps)
-        logger.info("Wrote status file: %s", status_file)
     
     logger.info("After message_handler.run()")
     listener.stop()
