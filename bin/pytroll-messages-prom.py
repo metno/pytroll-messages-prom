@@ -320,13 +320,13 @@ def main():
     logger = logging.getLogger("MessageHandler")
 
     latest_status = {}
+    status_file = "/tmp/latest-messages-prom-status"
     atexit.register(save_status_file, logger, status_file, latest_status)
 
     # Create a metric from message key start_time
     start_http_server(config.get('prometheus_client_port', 8000))
 
     listener_queue = queue.Queue()
-    status_file = "/tmp/latest-messages-prom-status"
     startup_status = {}
     if os.path.exists(status_file):
          with open(status_file, "rb") as ps:
