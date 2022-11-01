@@ -99,7 +99,11 @@ sat_tr = {'Metop-B': 'metop-b',
           'MSG1': 'meteosat 8',
           'MSG2': 'meteosat 9',
           'MSG3': 'meteosat 10',
-          'MSG4': 'meteosat 11'}
+          'MSG4': 'meteosat 11',
+          'MET8': 'meteosat 8',
+          'MET9': 'meteosat 9',
+          'MET10': 'meteosat 10',
+          'MET11': 'meteosat 11'}
 
 class Listener(Thread):
 
@@ -220,6 +224,8 @@ def read_from_queue(listener_queue, logger, startup_status, latest_status):
                 try:
                     platform_name = sat_tr.get(msg.data['platform_name'], msg.data['platform_name'])
                 except KeyError:
+                    if '0deg' in msg.subject:
+                        platform_name = "meteosat 0deg"
                     pass
                 MESSAGE_START_TIME.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).set(start_time)
                 MESSAGE_END_TIME.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).set(end_time)
