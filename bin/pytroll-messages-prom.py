@@ -95,7 +95,11 @@ sat_tr = {'Metop-B': 'metop-b',
           'DK01': 'himawari 8',
           'G16': 'goes 16',
           'G17': 'goes 17',
-          'G18': 'goes 18'}
+          'G18': 'goes 18',
+          'MSG1': 'meteosat 8',
+          'MSG2': 'meteosat 9',
+          'MSG3': 'meteosat 10',
+          'MSG4': 'meteosat 11'}
 
 class Listener(Thread):
 
