@@ -226,6 +226,8 @@ def read_from_queue(listener_queue, logger, startup_status, latest_status):
                 except KeyError:
                     if '0deg' in msg.subject:
                         platform_name = "meteosat 0deg"
+                    elif 'rss' in msg.subject:
+                        platform_name = "meteosat rss"
                     pass
                 MESSAGE_START_TIME.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).set(start_time)
                 MESSAGE_END_TIME.labels(message_type=msg.type, topic=msg.subject, platform_name=platform_name).set(end_time)
