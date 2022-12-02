@@ -245,9 +245,10 @@ def read_from_queue(listener_queue, logger, startup_status, latest_status):
                     
             elif msg.type == 'beat' or msg.type == 'info':
                 try:
-                    MESSAGE_REGISTER_TIME.labels(message_type=msg.type, topic=msg.subject).set_to_current_time()
-                    MESSAGE_NUMBER_OF.labels(message_type=msg.type, topic=msg.subject).inc()
-                except Exception:
+                    MESSAGE_REGISTER_TIME.labels(message_type=msg.type, topic=msg.subject, platform_name="NA").set_to_current_time()
+                    MESSAGE_NUMBER_OF.labels(message_type=msg.type, topic=msg.subject, platform_name="NA").inc()
+                except Exception as ex:
+                    logger.warning("Got beat or info exception: %s", str(ex))
                     pass
             else:
                 try:
