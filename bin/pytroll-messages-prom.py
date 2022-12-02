@@ -199,7 +199,7 @@ def read_from_queue(listener_queue, logger, startup_status, latest_status):
             except queue.Empty:
                 continue
             logger.info("Got new message. Queue size is now: {}".format(listener_queue.qsize()))
-            #logger.debug("%s", str(msg))
+            logger.info("%s", str(msg))
             if msg.type != "beat" and msg.type != 'info':
 
                 try:
