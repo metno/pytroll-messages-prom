@@ -142,7 +142,8 @@ class Listener(Thread):
                            nameserver=self.config['nameserver']) as subscr:
 
                 self.logger.debug("Entering for loop subscr.recv")
-                for msg in subscr.recv(timeout=1):
+                # for msg in subscr.recv(timeout=1):
+                for msg in subscr.recv():
                     if not self.loop:
                         self.logger.warning("Self.loop false in FileListener %s. Breaking.", str(self.loop))
                         break
@@ -151,7 +152,7 @@ class Listener(Thread):
                         continue
 
                     self.logger.info("Put the message on the queue...")
-                    #self.logger.debug("Message = " + str(msg))
+                    self.logger.info("Message = " + str(msg))
                     self.queue.put(msg)
                     self.logger.debug("After queue put.")
 
@@ -199,7 +200,7 @@ def read_from_queue(listener_queue, logger, startup_status, latest_status):
             except queue.Empty:
                 continue
             logger.info("Got new message. Queue size is now: {}".format(listener_queue.qsize()))
-            logger.info("%s", str(msg))
+            #logger.info("%s", str(msg))
             if msg.type != "beat" and msg.type != 'info':
 
                 try:
