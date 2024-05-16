@@ -212,10 +212,12 @@ def read_from_queue(listener_queue, logger, startup_status, latest_status):
                     except KeyError:
                         logger.error(f"Failed to get start/nominal time from message: {str(msg.data)}")
                         continue
-                except AttributeError as ae:
-                    logger.error(f"Failed to get start time from message: {str(msg.data)}\n{str(ae)}")
-                    continue
-
+                except AttributeError:
+                    try:
+                        start_time = datetime.fromisoformat(msg.data['start_time'])
+                    except ValueError as ve:
+                        logger.error(f"Failed to get start time from message: {str(msg.data)}\n{str(ve)}")
+                        continue
                 try:
                     end_time = msg.data['start_time'].timestamp()
                 except Exception:
