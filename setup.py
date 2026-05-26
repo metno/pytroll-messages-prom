@@ -23,10 +23,12 @@
 """Setup for pytroll_messages_prom.
 """
 from setuptools import setup
-import imp
+import importlib.util
 
-version = imp.load_source(
+spec = importlib.util.spec_from_file_location(
     'messages_prom.version', 'messages_prom/version.py')
+version = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(version)
 
 setup(name="pytroll_messages_prom",
       version=version.__version__,
